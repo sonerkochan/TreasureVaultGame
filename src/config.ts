@@ -19,5 +19,9 @@ export default {
       ],
       panSpeed: 0.2,
     },
+    simple: {  // Add this new config
+      layers: ["/public/assets/bg.png"], // Path relative to public/assets
+      panSpeed: 0.1,
+    },
   },
 } as Config;
