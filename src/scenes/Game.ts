@@ -25,6 +25,13 @@ export default class Game extends Container {
   private generatedPattern: number[] = [];
   private isUnlocked = false;
 
+  // Reset animation
+  private isResetting = false;
+  private resetSpinSpeed = 0;
+  private resetSpinDuration = 0;
+  private readonly RESET_SPIN_DURATION = 180;
+  private readonly RESET_SPIN_SPEED = 0.3;
+
   constructor(protected utils: SceneUtils) {
     super();
     this.generatePattern();
@@ -114,7 +121,7 @@ export default class Game extends Container {
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
     
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 rotations per segment, Dont forget to add more 3 later.
+      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 rotations per segment
       
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
@@ -126,8 +133,52 @@ export default class Game extends Container {
     this.generatedPattern = pattern;
   }
 
+  private hasInputError(): boolean {
+    if (this.fullRotations.length < 2) return false;
+
+    const compareLength = Math.min(this.fullRotations.length, this.generatedPattern.length);
+    const userInput = this.fullRotations.slice(-compareLength);
+    const patternPart = this.generatedPattern.slice(0, compareLength);
+
+    for (let i = 0; i < userInput.length; i++) {
+      if (userInput[i] !== patternPart[i]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private startReset() {
+    this.isResetting = true;
+    this.resetSpinSpeed = this.RESET_SPIN_SPEED * (Math.random() > 0.5 ? 1 : -1);
+    this.resetSpinDuration = this.RESET_SPIN_DURATION;
+  }
+
+  private handleResetSpin(delta: number) {
+    this.handle.rotation += this.resetSpinSpeed * delta;
+    this.shadow.rotation = this.handle.rotation;
+
+    this.resetSpinDuration -= delta;
+
+    if (this.resetSpinDuration <= 0) {
+      this.isResetting = false;
+      this.fullRotations = [];
+      this.accumulatedRotation = 0;
+      this.handle.rotation = 0;
+      this.shadow.rotation = 0;
+      this.generatePattern();
+      this.updateRotationDisplay();
+    }
+  }
+
   update(delta: number) {
     if (this.isUnlocked) return;
+
+    if (this.isResetting) {
+      this.handleResetSpin(delta);
+      return;
+    }
 
     const fullRotation = Math.PI / 3; // 60 degrees in radians
     let rotationAmount = 0;
@@ -166,6 +217,11 @@ export default class Game extends Container {
       if (this.lastDirection) {
         this.fullRotations.push(this.lastDirection === 'LEFT' ? -1 : 1);
         this.accumulatedRotation -= fullRotation;
+
+        if (this.hasInputError()) {
+          this.startReset();
+          return;
+        }
       }
     }
   
@@ -178,11 +234,6 @@ export default class Game extends Container {
   
     this.updateRotationDisplay();
   }
-  
-  
-  
-  
-  
 
   private updateRotationDisplay() {
     const display = document.getElementById('rotation-display');
@@ -196,7 +247,7 @@ export default class Game extends Container {
       <div><strong>History:</strong> ${rotationText}</div>
       <div><strong>Total:</strong> ${this.fullRotations.length}</div>
       <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
-      <div><strong>Match:</strong> ${this.isUnlocked ? '✅ Unlocked' : '❌ Still locked'}</div>
+      <div><strong>Status:</strong> ${this.isUnlocked ? '✅ Unlocked' : '❌ Still locked'}</div>
     `;
   }
 
