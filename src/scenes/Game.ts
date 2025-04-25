@@ -13,13 +13,14 @@ export default class Game extends Container {
   private doorOpenShadow!: Sprite;
   private handle!: Sprite;
   private handleShadow!: Sprite;
+  private timerContainer!: Container;
+  private timerText!: Text;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
   private rotationSpeed = 0.05;
   private maxRotation = 3 * Math.PI;
   private fullRotations: number[] = [];
-  private currentRotation = 0;
   private accumulatedRotation = 0;
   private lastDirection: 'LEFT' | 'RIGHT' | null = null;
 
@@ -28,6 +29,11 @@ export default class Game extends Container {
   private isUnlocked = false;
   private unlockTime = 0;
   private readonly UNLOCK_DURATION = 300; // 5 seconds at 60fps
+
+  // Timer tracking
+  private startTime = 0;
+  private currentTime = 0;
+  private timerActive = false;
 
   // Reset animation
   private isResetting = false;
@@ -38,7 +44,6 @@ export default class Game extends Container {
 
   constructor(protected utils: SceneUtils) {
     super();
-    this.generatePattern();
   }
 
   async load() {
@@ -61,54 +66,112 @@ export default class Game extends Container {
 
   async start() {
     this.removeChildren();
-
+  
+    this.initTimer();
+    
     const bgTexture = Texture.from('assets/bg.png');
     this.background = new Sprite(bgTexture);
     this.background.width = window.innerWidth;
     this.background.height = window.innerHeight;
-
+  
     const doorTexture = Texture.from('assets/door.png');
     this.door = new Sprite(doorTexture);
     this.door.anchor.set(0.5);
     this.door.position.set(window.innerWidth * 0.5, window.innerHeight * 0.49);
     this.door.scale.set(0.25);
-
+  
     const doorOpenTexture = Texture.from('assets/doorOpen.png');
     this.doorOpen = new Sprite(doorOpenTexture);
     this.doorOpen.anchor.set(0.5);
     this.doorOpen.position.set(window.innerWidth * 0.73, window.innerHeight * 0.49);
     this.doorOpen.scale.set(0.25);
     this.doorOpen.visible = false;
-
+  
     const doorOpenShadowTexture = Texture.from('assets/doorOpenShadow.png');
     this.doorOpenShadow = new Sprite(doorOpenShadowTexture);
     this.doorOpenShadow.anchor.set(0.5);
     this.doorOpenShadow.position.set(this.doorOpen.position.x + 30, this.doorOpen.position.y + 10);
     this.doorOpenShadow.scale.set(0.25);
     this.doorOpenShadow.visible = false;
-
+  
     const handleShadowTexture = Texture.from('assets/handleShadow.png');
     this.handleShadow = new Sprite(handleShadowTexture);
     this.handleShadow.anchor.set(0.5);
     this.handleShadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
     this.handleShadow.scale.set(0.25);
-
+  
     const handleTexture = Texture.from('assets/handle.png');
     this.handle = new Sprite(handleTexture);
     this.handle.anchor.set(0.5);
     this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
     this.handle.scale.set(0.25);
-
+  
     this.addChild(
       this.background,
       this.door,
       this.handleShadow,
       this.handle,
       this.doorOpenShadow,
-      this.doorOpen
+      this.doorOpen,
+      this.timerContainer
+    );
+  
+    this.createRotationDisplay();
+    this.generatePattern();  // Generate the pattern
+  
+    this.updateRotationDisplay();
+  
+    this.startTimer();
+  }
+  
+
+  private initTimer() {
+    this.timerContainer = new Container();
+    
+    this.timerText = new Text("00.00", {
+      fontFamily: "Arial",
+      fontSize: 24,
+      fill: "#ffffff",
+      fontWeight: "bold"
+    });
+    this.timerText.anchor.set(0.5);
+    this.timerText.position.set(75, 25);
+    
+    this.timerContainer.addChild(this.timerText);
+    this.positionTimer();
+  }
+
+  private positionTimer() {
+    this.timerContainer.position.set(
+      window.innerWidth * 0.28,
+      window.innerHeight * 0.435
     );
 
-    this.createRotationDisplay();
+    
+  this.timerContainer.scale.set(0.5);
+  }
+
+  private startTimer() {
+    this.startTime = performance.now();
+    this.currentTime = 0;
+    this.timerActive = true;
+    this.updateTimerText();
+  }
+
+  private stopTimer() {
+    this.timerActive = false;
+  }
+
+  private resetTimer() {
+    this.startTime = performance.now();
+    this.currentTime = 0;
+    this.updateTimerText();
+  }
+
+  private updateTimerText() {
+    if (!this.timerText) return;
+    const formattedTime = this.currentTime.toFixed(2).padStart(5, '0');
+    this.timerText.text = formattedTime;
   }
 
   private createRotationDisplay() {
@@ -150,6 +213,7 @@ export default class Game extends Container {
     }
 
     this.generatedPattern = pattern;
+    this.resetTimer();
   }
 
   private hasInputError(): boolean {
@@ -199,11 +263,12 @@ export default class Game extends Container {
     this.handleShadow.visible = false;
     this.doorOpen.visible = true;
     this.doorOpenShadow.visible = true;
+    this.stopTimer();
     
     const display = document.getElementById('rotation-display');
     if (display) {
       display.innerHTML = `
-        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked!</div>
+        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked in ${this.currentTime.toFixed(2)}s!</div>
         <div>Auto-closing in ${Math.ceil(this.unlockTime/60)} seconds...</div>
       `;
     }
@@ -216,7 +281,7 @@ export default class Game extends Container {
     if (display) {
       const secondsLeft = Math.ceil(this.unlockTime/60);
       display.innerHTML = `
-        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked!</div>
+        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked in ${this.currentTime.toFixed(2)}s!</div>
         <div>Auto-closing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...</div>
       `;
     }
@@ -235,10 +300,24 @@ export default class Game extends Container {
     this.doorOpenShadow.visible = false;
     
     this.startReset();
+    this.startTimer();
     this.updateRotationDisplay();
   }
 
   update(delta: number) {
+    // Hide timer while resetting
+    if (this.isResetting) {
+      this.timerContainer.visible = false;
+    } else {
+      this.timerContainer.visible = true;
+    }
+
+    // Update timer
+    if (this.timerActive && !this.isUnlocked) {
+      this.currentTime = (performance.now() - this.startTime) / 1000;
+      this.updateTimerText();
+    }
+
     if (this.isUnlocked) {
       this.handleUnlockCountdown(delta);
       return;
@@ -324,6 +403,9 @@ export default class Game extends Container {
     if (this.background) {
       this.background.width = width;
       this.background.height = height;
+    }
+    if (this.timerContainer) {
+      this.positionTimer();
     }
     if (this.door) {
       this.door.position.set(width * 0.5, height * 0.49);
