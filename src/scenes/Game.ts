@@ -19,7 +19,7 @@ export default class Game extends Container {
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
-  private rotationSpeed = 0.05;
+  private rotationSpeed = 0.03;
   private maxRotation = 3 * Math.PI;
   private fullRotations: number[] = [];
   private accumulatedRotation = 0;
