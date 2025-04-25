@@ -15,6 +15,7 @@ export default class Game extends Container {
   private handleShadow!: Sprite;
   private timerContainer!: Container;
   private timerText!: Text;
+  private blinkEffect!: Sprite;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
@@ -28,7 +29,7 @@ export default class Game extends Container {
   private generatedPattern: number[] = [];
   private isUnlocked = false;
   private unlockTime = 0;
-  private readonly UNLOCK_DURATION = 300; // 5 seconds at 60fps
+  private readonly UNLOCK_DURATION = 300;
 
   // Timer tracking
   private startTime = 0;
@@ -41,6 +42,10 @@ export default class Game extends Container {
   private resetSpinDuration = 0;
   private readonly RESET_SPIN_DURATION = 180;
   private readonly RESET_SPIN_SPEED = 0.3;
+
+  // Blink effect
+  private blinkPhase = 0;
+  private readonly BLINK_SPEED = 0.1;
 
   constructor(protected utils: SceneUtils) {
     super();
@@ -67,6 +72,7 @@ export default class Game extends Container {
   async start() {
     this.removeChildren();
   
+    // Initialize timer first
     this.initTimer();
     
     const bgTexture = Texture.from('assets/bg.png');
@@ -105,6 +111,14 @@ export default class Game extends Container {
     this.handle.anchor.set(0.5);
     this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
     this.handle.scale.set(0.25);
+
+    const blinkTexture = Texture.from('assets/blink.png');
+    this.blinkEffect = new Sprite(blinkTexture);
+    this.blinkEffect.anchor.set(0.5);
+    this.blinkEffect.position.set(window.innerWidth * 0.5, window.innerHeight * 0.5);
+    this.blinkEffect.scale.set(0.25);
+    this.blinkEffect.visible = false;
+    this.blinkEffect.alpha = 0;
   
     this.addChild(
       this.background,
@@ -113,17 +127,15 @@ export default class Game extends Container {
       this.handle,
       this.doorOpenShadow,
       this.doorOpen,
-      this.timerContainer
+      this.timerContainer,
+      this.blinkEffect
     );
   
     this.createRotationDisplay();
-    this.generatePattern();  // Generate the pattern
-  
+    this.generatePattern();
     this.updateRotationDisplay();
-  
     this.startTimer();
   }
-  
 
   private initTimer() {
     this.timerContainer = new Container();
@@ -146,9 +158,7 @@ export default class Game extends Container {
       window.innerWidth * 0.28,
       window.innerHeight * 0.435
     );
-
-    
-  this.timerContainer.scale.set(0.5);
+    this.timerContainer.scale.set(0.5);
   }
 
   private startTimer() {
@@ -265,6 +275,10 @@ export default class Game extends Container {
     this.doorOpenShadow.visible = true;
     this.stopTimer();
     
+    // Blinking effect start
+    this.blinkEffect.visible = true;
+    this.blinkPhase = 0;
+    
     const display = document.getElementById('rotation-display');
     if (display) {
       display.innerHTML = `
@@ -274,8 +288,16 @@ export default class Game extends Container {
     }
   }
 
+  private updateBlinkEffect(delta: number) {
+    if (!this.blinkEffect.visible) return;
+    
+    this.blinkPhase += this.BLINK_SPEED * delta;
+    this.blinkEffect.alpha = Math.abs(Math.sin(this.blinkPhase)) * 0.5 + 0.5; // Oscillates between 0.5 and 1.0
+  }
+
   private handleUnlockCountdown(delta: number) {
     this.unlockTime -= delta;
+    this.updateBlinkEffect(delta);
     
     const display = document.getElementById('rotation-display');
     if (display) {
@@ -298,6 +320,7 @@ export default class Game extends Container {
     this.handleShadow.visible = true;
     this.doorOpen.visible = false;
     this.doorOpenShadow.visible = false;
+    this.blinkEffect.visible = false;
     
     this.startReset();
     this.startTimer();
@@ -305,7 +328,7 @@ export default class Game extends Container {
   }
 
   update(delta: number) {
-    // Hide timer while resetting
+    // Hide the timer when resetting
     if (this.isResetting) {
       this.timerContainer.visible = false;
     } else {
@@ -421,6 +444,9 @@ export default class Game extends Container {
     }
     if (this.doorOpenShadow) {
       this.doorOpenShadow.position.set(width * 0.73 + 10, height * 0.49 + 10);
+    }
+    if (this.blinkEffect) {
+      this.blinkEffect.position.set(width * 0.5, height * 0.5);
     }
   }
 }
