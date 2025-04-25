@@ -9,8 +9,10 @@ export default class Game extends Container {
   // Visual elements
   private background!: Sprite;
   private door!: Sprite;
+  private doorOpen!: Sprite;
+  private doorOpenShadow!: Sprite;
   private handle!: Sprite;
-  private shadow!: Sprite;
+  private handleShadow!: Sprite;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
@@ -58,34 +60,52 @@ export default class Game extends Container {
   async start() {
     this.removeChildren();
 
-    // Background
     const bgTexture = Texture.from('public/assets/bg.png');
     this.background = new Sprite(bgTexture);
     this.background.width = window.innerWidth;
     this.background.height = window.innerHeight;
 
-    // Door
     const doorTexture = Texture.from('public/assets/door.png');
     this.door = new Sprite(doorTexture);
     this.door.anchor.set(0.5);
     this.door.position.set(window.innerWidth * 0.5, window.innerHeight * 0.49);
     this.door.scale.set(0.25);
 
-    // Handle shadow
-    const shadowTexture = Texture.from('public/assets/handleShadow.png');
-    this.shadow = new Sprite(shadowTexture);
-    this.shadow.anchor.set(0.5);
-    this.shadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
-    this.shadow.scale.set(0.25);
+    const doorOpenTexture = Texture.from('public/assets/doorOpen.png');
+    this.doorOpen = new Sprite(doorOpenTexture);
+    this.doorOpen.anchor.set(0.5);
+    this.doorOpen.position.set(window.innerWidth * 0.73, window.innerHeight * 0.49);
+    this.doorOpen.scale.set(0.25);
+    this.doorOpen.visible = false;
 
-    // Handle
+    const doorOpenShadowTexture = Texture.from('public/assets/doorOpenShadow.png');
+    this.doorOpenShadow = new Sprite(doorOpenShadowTexture);
+    this.doorOpenShadow.anchor.set(0.5);
+    this.doorOpenShadow.position.set(this.doorOpen.position.x + 30, this.doorOpen.position.y + 10);
+    this.doorOpenShadow.scale.set(0.25);
+    this.doorOpenShadow.visible = false;
+
+    const handleShadowTexture = Texture.from('public/assets/handleShadow.png');
+    this.handleShadow = new Sprite(handleShadowTexture);
+    this.handleShadow.anchor.set(0.5);
+    this.handleShadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
+    this.handleShadow.scale.set(0.25);
+
     const handleTexture = Texture.from('public/assets/handle.png');
     this.handle = new Sprite(handleTexture);
     this.handle.anchor.set(0.5);
     this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
     this.handle.scale.set(0.25);
 
-    this.addChild(this.background, this.door, this.shadow, this.handle);
+    this.addChild(
+      this.background,
+      this.door,
+      this.handleShadow,
+      this.handle,
+      this.doorOpenShadow,
+      this.doorOpen
+    );
+
     this.createRotationDisplay();
   }
 
@@ -117,19 +137,16 @@ export default class Game extends Container {
 
   private generatePattern() {
     const pattern: number[] = [];
-    
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
-    
+
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 rotations per segment
-      
+      const times = Math.floor(Math.random() * 4) + 3;
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
       }
-      
       currentDirection *= -1;
     }
-    
+
     this.generatedPattern = pattern;
   }
 
@@ -157,7 +174,7 @@ export default class Game extends Container {
 
   private handleResetSpin(delta: number) {
     this.handle.rotation += this.resetSpinSpeed * delta;
-    this.shadow.rotation = this.handle.rotation;
+    this.handleShadow.rotation = this.handle.rotation;
 
     this.resetSpinDuration -= delta;
 
@@ -166,23 +183,30 @@ export default class Game extends Container {
       this.fullRotations = [];
       this.accumulatedRotation = 0;
       this.handle.rotation = 0;
-      this.shadow.rotation = 0;
+      this.handleShadow.rotation = 0;
       this.generatePattern();
       this.updateRotationDisplay();
     }
   }
 
   update(delta: number) {
-    if (this.isUnlocked) return;
+    if (this.isUnlocked) {
+      this.door.visible = false;
+      this.handle.visible = false;
+      this.handleShadow.visible = false;
+      this.doorOpen.visible = true;
+      this.doorOpenShadow.visible = true;
+      return;
+    }
 
     if (this.isResetting) {
       this.handleResetSpin(delta);
       return;
     }
 
-    const fullRotation = Math.PI / 3; // 60 degrees in radians
+    const fullRotation = Math.PI / 3;
     let rotationAmount = 0;
-  
+
     if (this.keyboard.getAction("LEFT")) {
       rotationAmount = -this.rotationSpeed * delta;
       this.lastDirection = 'LEFT';
@@ -191,28 +215,28 @@ export default class Game extends Container {
       this.lastDirection = 'RIGHT';
     } else {
       this.handle.rotation *= 0.9;
-      this.shadow.rotation = this.handle.rotation;
+      this.handleShadow.rotation = this.handle.rotation;
       return;
     }
-  
+
     const newRotation = this.handle.rotation + rotationAmount;
-  
+
     const currentFullRotations = Math.floor(Math.abs(this.handle.rotation) / fullRotation);
-    
-    if (currentFullRotations >= 9 && 
-        ((rotationAmount > 0 && newRotation > this.handle.rotation) || 
-         (rotationAmount < 0 && newRotation < this.handle.rotation))) {
+
+    if (currentFullRotations >= 9 &&
+      ((rotationAmount > 0 && newRotation > this.handle.rotation) ||
+        (rotationAmount < 0 && newRotation < this.handle.rotation))) {
       const maxRotationSign = newRotation > 0 ? 1 : -1;
       this.handle.rotation = maxRotationSign * this.maxRotation;
-      this.shadow.rotation = this.handle.rotation;
+      this.handleShadow.rotation = this.handle.rotation;
       return;
     }
-  
+
     this.handle.rotation = newRotation;
-    this.shadow.rotation = this.handle.rotation;
-  
+    this.handleShadow.rotation = this.handle.rotation;
+
     this.accumulatedRotation += Math.abs(rotationAmount);
-  
+
     while (this.accumulatedRotation >= fullRotation) {
       if (this.lastDirection) {
         this.fullRotations.push(this.lastDirection === 'LEFT' ? -1 : 1);
@@ -224,14 +248,14 @@ export default class Game extends Container {
         }
       }
     }
-  
+
     const patternStr = this.generatedPattern.join(',');
     const historyStr = this.fullRotations.slice(-this.generatedPattern.length).join(',');
-  
+
     if (patternStr === historyStr) {
       this.isUnlocked = true;
     }
-  
+
     this.updateRotationDisplay();
   }
 
@@ -259,11 +283,17 @@ export default class Game extends Container {
     if (this.door) {
       this.door.position.set(width * 0.5, height * 0.49);
     }
-    if (this.shadow) {
-      this.shadow.position.set(width * 0.485, height * 0.5);
+    if (this.handleShadow) {
+      this.handleShadow.position.set(width * 0.485, height * 0.5);
     }
     if (this.handle) {
       this.handle.position.set(width * 0.485, height * 0.485);
+    }
+    if (this.doorOpen) {
+      this.doorOpen.position.set(width * 0.73, height * 0.49);
+    }
+    if (this.doorOpenShadow) {
+      this.doorOpenShadow.position.set(width * 0.73 + 10, height * 0.49 + 10);
     }
   }
 }
