@@ -11,7 +11,7 @@ export default class Game extends Container {
   private door!: Sprite;
   private handle!: Sprite;
   private shadow!: Sprite;
-  
+
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
   private rotationSpeed = 0.05;
@@ -21,15 +21,18 @@ export default class Game extends Container {
   private accumulatedRotation = 0;
   private lastDirection: 'LEFT' | 'RIGHT' | null = null;
 
+  // Unlock pattern
+  private generatedPattern: number[] = [];
+  private isUnlocked = false;
+
   constructor(protected utils: SceneUtils) {
     super();
+    this.generatePattern();
   }
 
   async load() {
-    // Load all assets
     await this.utils.assetLoader.loadAssets();
 
-    // Create loading screen
     const text = new Text("Loading...", {
       fontFamily: "Verdana",
       fontSize: 50,
@@ -53,47 +56,29 @@ export default class Game extends Container {
     this.background = new Sprite(bgTexture);
     this.background.width = window.innerWidth;
     this.background.height = window.innerHeight;
-    this.background.position.set(0, 0);
 
-    // Create door
+    // Door
     const doorTexture = Texture.from('public/assets/door.png');
     this.door = new Sprite(doorTexture);
     this.door.anchor.set(0.5);
-    this.door.position.set(
-      window.innerWidth * 0.5,
-      window.innerHeight * 0.49
-    );
+    this.door.position.set(window.innerWidth * 0.5, window.innerHeight * 0.49);
     this.door.scale.set(0.25);
 
-    // Create handle shadow
+    // Handle shadow
     const shadowTexture = Texture.from('public/assets/handleShadow.png');
     this.shadow = new Sprite(shadowTexture);
     this.shadow.anchor.set(0.5);
-    this.shadow.position.set(
-      window.innerWidth * 0.485,
-      window.innerHeight * 0.5
-    );
+    this.shadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
     this.shadow.scale.set(0.25);
 
-    // Create handle with centered pivot point for rotation
+    // Handle
     const handleTexture = Texture.from('public/assets/handle.png');
     this.handle = new Sprite(handleTexture);
-    this.handle.anchor.set(0.5, 0.5); // 0.5 Y isright so it rotates from center!
-    this.handle.position.set(
-      window.innerWidth * 0.485,
-      window.innerHeight * 0.485
-    );
+    this.handle.anchor.set(0.5);
+    this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
     this.handle.scale.set(0.25);
 
-    // Add all elements in proper z-order
-    this.addChild(
-      this.background,
-      this.door,
-      this.shadow,
-      this.handle
-    );
-
-    // Create rotation display element
+    this.addChild(this.background, this.door, this.shadow, this.handle);
     this.createRotationDisplay();
   }
 
@@ -110,6 +95,8 @@ export default class Game extends Container {
         padding: 10px;
         border-radius: 5px;
         z-index: 1000;
+        max-width: 300px;
+        line-height: 1.6;
       }
     `;
     document.head.appendChild(style);
@@ -117,22 +104,35 @@ export default class Game extends Container {
     const display = document.createElement('div');
     display.id = 'rotation-display';
     document.body.appendChild(display);
+
+    this.updateRotationDisplay();
+  }
+
+  private generatePattern() {
+    const pattern: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 times
+      for (let j = 0; j < times; j++) {
+        pattern.push(direction);
+      }
+    }
+    this.generatedPattern = pattern;
   }
 
   update(delta: number) {
+    if (this.isUnlocked) return;
+
     const fullRotation = 2 * Math.PI;
     let rotationAmount = 0;
 
-    // Handle rotation input
     if (this.keyboard.getAction("LEFT")) {
       rotationAmount = -this.rotationSpeed * delta;
       this.lastDirection = 'LEFT';
-    } 
-    else if (this.keyboard.getAction("RIGHT")) {
+    } else if (this.keyboard.getAction("RIGHT")) {
       rotationAmount = this.rotationSpeed * delta;
       this.lastDirection = 'RIGHT';
-    }
-    else {
+    } else {
       this.handle.rotation *= 0.9;
       this.shadow.rotation = this.handle.rotation;
       return;
@@ -140,11 +140,10 @@ export default class Game extends Container {
 
     this.handle.rotation += rotationAmount;
     this.shadow.rotation = this.handle.rotation;
-    
+
     this.currentRotation += rotationAmount;
     this.accumulatedRotation += Math.abs(rotationAmount);
 
-    // Full rotation
     const completedRotations = Math.floor(this.accumulatedRotation / fullRotation);
     if (completedRotations > 0) {
       for (let i = 0; i < completedRotations; i++) {
@@ -152,32 +151,37 @@ export default class Game extends Container {
       }
       this.accumulatedRotation %= fullRotation;
       this.updateRotationDisplay();
+
+      const patternStr = this.generatedPattern.join(',');
+      const historyStr = this.fullRotations.slice(-this.generatedPattern.length).join(',');
+      if (patternStr === historyStr) {
+        this.isUnlocked = true;
+        this.updateRotationDisplay();
+      }
     }
   }
 
   private updateRotationDisplay() {
     const display = document.getElementById('rotation-display');
     if (!display) return;
-  
-    const rotationText = this.fullRotations.map(r => 
-      r === 1 ? '↻' : '↺'
-    ).join(' ');
-  
+
+    const rotationText = this.fullRotations.map(r => r === 1 ? '↻' : '↺').join('');
+    const passwordText = this.generatedPattern.map(r => r === 1 ? '↻' : '↺').join('');
+
     display.innerHTML = `
-      <div>Total Rotations: ${this.fullRotations.length}</div>
-      <div>History: ${rotationText}</div>
-      <div>Current: ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
+      <div><strong>Password:</strong> ${passwordText}</div>
+      <div><strong>History:</strong> ${rotationText}</div>
+      <div><strong>Total:</strong> ${this.fullRotations.length}</div>
+      <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
+      <div><strong>Match:</strong> ${this.isUnlocked ? '✅ UNLOCKED' : '❌ Not yet'}</div>
     `;
   }
 
   onResize(width: number, height: number) {
-    // Background
     if (this.background) {
       this.background.width = width;
       this.background.height = height;
     }
-
-    // Door elements
     if (this.door) {
       this.door.position.set(width * 0.5, height * 0.49);
     }
