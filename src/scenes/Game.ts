@@ -60,38 +60,38 @@ export default class Game extends Container {
   async start() {
     this.removeChildren();
 
-    const bgTexture = Texture.from('public/assets/bg.png');
+    const bgTexture = Texture.from('assets/bg.png');
     this.background = new Sprite(bgTexture);
     this.background.width = window.innerWidth;
     this.background.height = window.innerHeight;
 
-    const doorTexture = Texture.from('public/assets/door.png');
+    const doorTexture = Texture.from('assets/door.png');
     this.door = new Sprite(doorTexture);
     this.door.anchor.set(0.5);
     this.door.position.set(window.innerWidth * 0.5, window.innerHeight * 0.49);
     this.door.scale.set(0.25);
 
-    const doorOpenTexture = Texture.from('public/assets/doorOpen.png');
+    const doorOpenTexture = Texture.from('assets/doorOpen.png');
     this.doorOpen = new Sprite(doorOpenTexture);
     this.doorOpen.anchor.set(0.5);
     this.doorOpen.position.set(window.innerWidth * 0.73, window.innerHeight * 0.49);
     this.doorOpen.scale.set(0.25);
     this.doorOpen.visible = false;
 
-    const doorOpenShadowTexture = Texture.from('public/assets/doorOpenShadow.png');
+    const doorOpenShadowTexture = Texture.from('assets/doorOpenShadow.png');
     this.doorOpenShadow = new Sprite(doorOpenShadowTexture);
     this.doorOpenShadow.anchor.set(0.5);
     this.doorOpenShadow.position.set(this.doorOpen.position.x + 30, this.doorOpen.position.y + 10);
     this.doorOpenShadow.scale.set(0.25);
     this.doorOpenShadow.visible = false;
 
-    const handleShadowTexture = Texture.from('public/assets/handleShadow.png');
+    const handleShadowTexture = Texture.from('assets/handleShadow.png');
     this.handleShadow = new Sprite(handleShadowTexture);
     this.handleShadow.anchor.set(0.5);
     this.handleShadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
     this.handleShadow.scale.set(0.25);
 
-    const handleTexture = Texture.from('public/assets/handle.png');
+    const handleTexture = Texture.from('assets/handle.png');
     this.handle = new Sprite(handleTexture);
     this.handle.anchor.set(0.5);
     this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
