@@ -15,7 +15,7 @@ export default class Game extends Container {
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
   private rotationSpeed = 0.05;
-  private maxRotation = 18 * Math.PI; // 9 full rotations
+  private maxRotation = 3 * Math.PI; // 9*60 degrees.
   private fullRotations: number[] = [];
   private currentRotation = 0;
   private accumulatedRotation = 0;
@@ -110,22 +110,28 @@ export default class Game extends Container {
 
   private generatePattern() {
     const pattern: number[] = [];
+    
+    let currentDirection = Math.random() > 0.5 ? 1 : -1;
+    
     for (let i = 0; i < 3; i++) {
-      const direction = Math.random() > 0.5 ? 1 : -1;
-      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 times
+      const times = Math.floor(Math.random() * 4) + 3; // 3 to 6 rotations per segment, Dont forget to add more 3 later.
+      
       for (let j = 0; j < times; j++) {
-        pattern.push(direction);
+        pattern.push(currentDirection);
       }
+      
+      currentDirection *= -1;
     }
+    
     this.generatedPattern = pattern;
   }
 
   update(delta: number) {
     if (this.isUnlocked) return;
 
-    const fullRotation = 2 * Math.PI;
+    const fullRotation = Math.PI / 3; // 60 degrees in radians
     let rotationAmount = 0;
-
+  
     if (this.keyboard.getAction("LEFT")) {
       rotationAmount = -this.rotationSpeed * delta;
       this.lastDirection = 'LEFT';
@@ -137,29 +143,46 @@ export default class Game extends Container {
       this.shadow.rotation = this.handle.rotation;
       return;
     }
-
-    this.handle.rotation += rotationAmount;
+  
+    const newRotation = this.handle.rotation + rotationAmount;
+  
+    const currentFullRotations = Math.floor(Math.abs(this.handle.rotation) / fullRotation);
+    
+    if (currentFullRotations >= 9 && 
+        ((rotationAmount > 0 && newRotation > this.handle.rotation) || 
+         (rotationAmount < 0 && newRotation < this.handle.rotation))) {
+      const maxRotationSign = newRotation > 0 ? 1 : -1;
+      this.handle.rotation = maxRotationSign * this.maxRotation;
+      this.shadow.rotation = this.handle.rotation;
+      return;
+    }
+  
+    this.handle.rotation = newRotation;
     this.shadow.rotation = this.handle.rotation;
-
-    this.currentRotation += rotationAmount;
+  
     this.accumulatedRotation += Math.abs(rotationAmount);
-
-    const completedRotations = Math.floor(this.accumulatedRotation / fullRotation);
-    if (completedRotations > 0) {
-      for (let i = 0; i < completedRotations; i++) {
+  
+    while (this.accumulatedRotation >= fullRotation) {
+      if (this.lastDirection) {
         this.fullRotations.push(this.lastDirection === 'LEFT' ? -1 : 1);
-      }
-      this.accumulatedRotation %= fullRotation;
-      this.updateRotationDisplay();
-
-      const patternStr = this.generatedPattern.join(',');
-      const historyStr = this.fullRotations.slice(-this.generatedPattern.length).join(',');
-      if (patternStr === historyStr) {
-        this.isUnlocked = true;
-        this.updateRotationDisplay();
+        this.accumulatedRotation -= fullRotation;
       }
     }
+  
+    const patternStr = this.generatedPattern.join(',');
+    const historyStr = this.fullRotations.slice(-this.generatedPattern.length).join(',');
+  
+    if (patternStr === historyStr) {
+      this.isUnlocked = true;
+    }
+  
+    this.updateRotationDisplay();
   }
+  
+  
+  
+  
+  
 
   private updateRotationDisplay() {
     const display = document.getElementById('rotation-display');
@@ -173,7 +196,7 @@ export default class Game extends Container {
       <div><strong>History:</strong> ${rotationText}</div>
       <div><strong>Total:</strong> ${this.fullRotations.length}</div>
       <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
-      <div><strong>Match:</strong> ${this.isUnlocked ? '✅ UNLOCKED' : '❌ Not yet'}</div>
+      <div><strong>Match:</strong> ${this.isUnlocked ? '✅ Unlocked' : '❌ Still locked'}</div>
     `;
   }
 
