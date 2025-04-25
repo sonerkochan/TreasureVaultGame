@@ -17,7 +17,7 @@ export default class Game extends Container {
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
   private rotationSpeed = 0.05;
-  private maxRotation = 3 * Math.PI; // 9*60 degrees.
+  private maxRotation = 3 * Math.PI;
   private fullRotations: number[] = [];
   private currentRotation = 0;
   private accumulatedRotation = 0;
@@ -26,6 +26,8 @@ export default class Game extends Container {
   // Unlock pattern
   private generatedPattern: number[] = [];
   private isUnlocked = false;
+  private unlockTime = 0;
+  private readonly UNLOCK_DURATION = 300; // 5 seconds at 60fps
 
   // Reset animation
   private isResetting = false;
@@ -189,13 +191,56 @@ export default class Game extends Container {
     }
   }
 
+  private unlockVault() {
+    this.isUnlocked = true;
+    this.unlockTime = this.UNLOCK_DURATION;
+    this.door.visible = false;
+    this.handle.visible = false;
+    this.handleShadow.visible = false;
+    this.doorOpen.visible = true;
+    this.doorOpenShadow.visible = true;
+    
+    const display = document.getElementById('rotation-display');
+    if (display) {
+      display.innerHTML = `
+        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked!</div>
+        <div>Auto-closing in ${Math.ceil(this.unlockTime/60)} seconds...</div>
+      `;
+    }
+  }
+
+  private handleUnlockCountdown(delta: number) {
+    this.unlockTime -= delta;
+    
+    const display = document.getElementById('rotation-display');
+    if (display) {
+      const secondsLeft = Math.ceil(this.unlockTime/60);
+      display.innerHTML = `
+        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked!</div>
+        <div>Auto-closing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...</div>
+      `;
+    }
+
+    if (this.unlockTime <= 0) {
+      this.resetAfterUnlock();
+    }
+  }
+
+  private resetAfterUnlock() {
+    this.isUnlocked = false;
+    this.door.visible = true;
+    this.handle.visible = true;
+    this.handleShadow.visible = true;
+    this.doorOpen.visible = false;
+    this.doorOpenShadow.visible = false;
+    
+    this.startReset();
+    this.updateRotationDisplay();
+  }
+
   update(delta: number) {
     if (this.isUnlocked) {
-      this.door.visible = false;
-      this.handle.visible = false;
-      this.handleShadow.visible = false;
-      this.doorOpen.visible = true;
-      this.doorOpenShadow.visible = true;
+      this.handleUnlockCountdown(delta);
       return;
     }
 
@@ -253,10 +298,10 @@ export default class Game extends Container {
     const historyStr = this.fullRotations.slice(-this.generatedPattern.length).join(',');
 
     if (patternStr === historyStr) {
-      this.isUnlocked = true;
+      this.unlockVault();
+    } else {
+      this.updateRotationDisplay();
     }
-
-    this.updateRotationDisplay();
   }
 
   private updateRotationDisplay() {
@@ -271,7 +316,7 @@ export default class Game extends Container {
       <div><strong>History:</strong> ${rotationText}</div>
       <div><strong>Total:</strong> ${this.fullRotations.length}</div>
       <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
-      <div><strong>Status:</strong> ${this.isUnlocked ? '✅ Unlocked' : '❌ Still locked'}</div>
+      <div><strong>Status:</strong> ${this.isResetting ? 'Resetting' : '❌ Still locked'}</div>
     `;
   }
 
