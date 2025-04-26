@@ -1,4 +1,4 @@
-import { Container, Text, Graphics, Sprite, Texture, Application } from "pixi.js";
+import { Container, Text, Graphics, Sprite, Texture, Application, AnimatedSprite } from "pixi.js";
 import { centerObjects } from "../utils/misc";
 import { SceneUtils } from "../core/App";
 import Keyboard from "../core/Keyboard";
@@ -8,13 +8,34 @@ const DESIGN_WIDTH = 1680;
 const DESIGN_HEIGHT = 720;
 const DESIGN_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
 
+const doorTextures = [
+  Texture.from('animations/P1.png'),
+  Texture.from('animations/P2.png'),
+  Texture.from('animations/P3.png'),
+  Texture.from('animations/P4.png'),
+  Texture.from('animations/P5.png'),
+  Texture.from('animations/P6.png'),
+  Texture.from('animations/P7.png'),
+  Texture.from('animations/P8.png'),
+  Texture.from('animations/P9.png'),
+  Texture.from('animations/P10.png'),
+  Texture.from('animations/P11.png'),
+  Texture.from('animations/P12.png'),
+  Texture.from('animations/P13.png'),
+  Texture.from('animations/P14.png'),
+  Texture.from('animations/P15.png'),
+  Texture.from('animations/P16.png'),
+  Texture.from('animations/P17.png'),
+  // add as many as you want
+];
+
 export default class Game extends Container {
   name = "Game";
 
   // Visual elements
   private background!: Sprite;
   private door!: Sprite;
-  private doorOpen!: Sprite;
+  private doorOpen!: Sprite;  
   private doorOpenShadow!: Sprite;
   private handle!: Sprite;
   private handleShadow!: Sprite;
@@ -23,6 +44,7 @@ export default class Game extends Container {
   private blinkEffect!: Sprite;
   private gameFrame!: Graphics;
   private app!: Application;
+  private animatedDoor!: AnimatedSprite;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
@@ -140,6 +162,19 @@ export default class Game extends Container {
     this.blinkEffect.visible = false;
     this.blinkEffect.alpha = 0;
   
+
+        
+
+    this.animatedDoor = new AnimatedSprite(doorTextures);
+    this.animatedDoor.anchor.set(0.5);
+    this.animatedDoor.position.set(DESIGN_WIDTH * 0.58, DESIGN_HEIGHT * 0.5);
+    this.animatedDoor.scale.set(0.25);
+    this.animatedDoor.animationSpeed = 0.2;
+    this.animatedDoor.loop = true;
+    this.animatedDoor.visible = false;
+    
+
+
     this.gameFrame.addChild(
       this.background,
       this.door,
@@ -148,7 +183,8 @@ export default class Game extends Container {
       this.doorOpenShadow,
       this.doorOpen,
       this.timerContainer,
-      this.blinkEffect
+      this.blinkEffect,
+      this.animatedDoor
     );
   
     this.createMuteButton();
@@ -337,14 +373,19 @@ export default class Game extends Container {
     this.isUnlocked = true;
     this.unlockTime = this.UNLOCK_DURATION;
 
+    
+    this.door.visible = false;
+    this.handle.visible = false;
+    this.handleShadow.visible = false;
+    this.animatedDoor.visible=true;
+    this.animatedDoor.play();
+
     setTimeout(() => {
-      this.door.visible = false;
-      this.handle.visible = false;
-      this.handleShadow.visible = false;
       this.doorOpen.visible = true;
       this.doorOpenShadow.visible = true;
       this.blinkEffect.visible = true;
       this.blinkPhase = 0;
+      this.animatedDoor.visible=false;
     }, 1000);  
 
     this.playOpenDoorSound();
