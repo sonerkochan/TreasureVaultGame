@@ -52,6 +52,7 @@ export default class Game extends Container {
   private muteButton!: HTMLButtonElement;
   private muteIcon!: HTMLElement;
   private historySound = new Audio('sounds/clickSound.wav'); 
+  private openDoorSound = new Audio('sounds/openDoor.wav'); 
   
 
 
@@ -151,6 +152,13 @@ export default class Game extends Container {
     if (!this.mute) {
       this.historySound.currentTime = 0;
       this.historySound.play();
+    }
+  }
+
+  private playOpenDoorSound() {
+    if (!this.mute) {
+      this.openDoorSound.currentTime = 0;
+      this.openDoorSound.play();
     }
   }
 
@@ -316,11 +324,18 @@ export default class Game extends Container {
   private unlockVault() {
     this.isUnlocked = true;
     this.unlockTime = this.UNLOCK_DURATION;
+
+    // Delay for opening door to make the UX better.
+    setTimeout(() => {
     this.door.visible = false;
     this.handle.visible = false;
     this.handleShadow.visible = false;
     this.doorOpen.visible = true;
     this.doorOpenShadow.visible = true;
+    }, 1000);  
+    this.playOpenDoorSound();
+
+
     this.stopTimer();
     
     // Blinking effect start
