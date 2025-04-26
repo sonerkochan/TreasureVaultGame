@@ -192,9 +192,6 @@ export default class Game extends Container {
     this.generatePattern();
     this.updateRotationDisplay();
     this.startTimer();
-    
-    // Initial resize to position everything correctly
-    this.onResize(this.app.screen.width, this.app.screen.height);
   }
 
   private playClickSound() {
