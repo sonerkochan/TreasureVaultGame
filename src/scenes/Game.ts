@@ -16,7 +16,7 @@ const doorTextures = [
   Texture.from('animations/P5.png'),
   Texture.from('animations/P6.png'),
   Texture.from('animations/P7.png'),
-  Texture.from('animations/P8.png'),
+  //8th img is not good.
   Texture.from('animations/P9.png'),
   Texture.from('animations/P10.png'),
   Texture.from('animations/P11.png'),
@@ -317,18 +317,38 @@ export default class Game extends Container {
   private generatePattern() {
     const pattern: number[] = [];
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
-
+  
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4);
+      const times = Math.floor(Math.random() * 4) + 6;
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
       }
       currentDirection *= -1;
     }
-
+  
     this.generatedPattern = pattern;
+  
+    // Grouping logic here
+    const result = [];
+    let current = pattern[0];
+    let count = 1;
+  
+    for (let i = 1; i < pattern.length; i++) {
+      if (pattern[i] === current) {
+        count++;
+      } else {
+        result.push(`${count}${current === 1 ? 'R' : 'L'}`);
+        current = pattern[i];
+        count = 1;
+      }
+    }
+    result.push(`${count}${current === 1 ? 'R' : 'L'}`); // push last group
+  
+    console.log(`Secret password: ${result.join(', ')}`);
+  
     this.resetTimer();
   }
+  
 
   private hasInputError(): boolean {
     if (this.fullRotations.length < 2) return false;
