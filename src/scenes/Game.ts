@@ -47,6 +47,14 @@ export default class Game extends Container {
   private blinkPhase = 0;
   private readonly BLINK_SPEED = 0.1;
 
+  // Sound effects
+  private mute = false;
+  private muteButton!: HTMLButtonElement;
+  private muteIcon!: HTMLElement;
+  private historySound = new Audio('sounds/clickSound.wav'); 
+  
+
+
   constructor(protected utils: SceneUtils) {
     super();
   }
@@ -131,11 +139,51 @@ export default class Game extends Container {
       this.blinkEffect
     );
   
+    this.createMuteButton();
     this.createRotationDisplay();
     this.generatePattern();
     this.updateRotationDisplay();
     this.startTimer();
   }
+
+
+  private playClickSound() {
+    if (!this.mute) {
+      this.historySound.currentTime = 0;
+      this.historySound.play();
+    }
+  }
+
+  private createMuteButton() {
+    this.muteButton = document.createElement('button');
+    this.muteButton.style.position = 'fixed';
+    this.muteButton.style.top = '20px';
+    this.muteButton.style.right = '20px';
+    this.muteButton.style.background = 'transparent';
+    this.muteButton.style.border = 'none';
+    this.muteButton.style.cursor = 'pointer';
+    this.muteButton.style.zIndex = '1001';
+    this.muteButton.style.fontSize = '32px';
+    this.muteButton.style.color = 'white';
+  
+    this.muteIcon = document.createElement('i');
+    this.muteIcon.className = 'fa-solid fa-volume-high'; // start unmuted
+    this.muteButton.appendChild(this.muteIcon);
+  
+    this.muteButton.addEventListener('click', () => this.toggleMute());
+  
+    document.body.appendChild(this.muteButton);
+  }
+  
+  private toggleMute() {
+    this.mute = !this.mute;
+    if (this.mute) {
+      this.muteIcon.className = 'fa-solid fa-volume-xmark'; // muted
+    } else {
+      this.muteIcon.className = 'fa-solid fa-volume-high'; // unmuted
+    }
+  }
+  
 
   private initTimer() {
     this.timerContainer = new Container();
@@ -388,6 +436,8 @@ export default class Game extends Container {
       if (this.lastDirection) {
         this.fullRotations.push(this.lastDirection === 'LEFT' ? -1 : 1);
         this.accumulatedRotation -= fullRotation;
+
+        this.playClickSound();
 
         if (this.hasInputError()) {
           this.startReset();
