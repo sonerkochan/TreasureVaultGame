@@ -271,7 +271,7 @@ export default class Game extends Container {
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
 
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4) + 3;
+      const times = Math.floor(Math.random() * 4); // Reduced to 3 for easier testing.
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
       }
@@ -332,15 +332,17 @@ export default class Game extends Container {
     this.handleShadow.visible = false;
     this.doorOpen.visible = true;
     this.doorOpenShadow.visible = true;
+    // Blinking effect start
+    this.blinkEffect.visible = true;
+    this.blinkPhase = 0;
     }, 1000);  
+
+    
     this.playOpenDoorSound();
 
 
     this.stopTimer();
     
-    // Blinking effect start
-    this.blinkEffect.visible = true;
-    this.blinkPhase = 0;
     
     const display = document.getElementById('rotation-display');
     if (display) {

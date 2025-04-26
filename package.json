@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@pixi/sound": "^5.2.0",
+    "@types/createjs": "^0.0.32",
     "gsap": "^3.11.4",
     "pixi.js": "^7.2.4"
   }
