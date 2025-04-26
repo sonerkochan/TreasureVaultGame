@@ -1,7 +1,12 @@
-import { Container, Text, Graphics, Sprite, Texture } from "pixi.js";
+import { Container, Text, Graphics, Sprite, Texture, Application } from "pixi.js";
 import { centerObjects } from "../utils/misc";
 import { SceneUtils } from "../core/App";
 import Keyboard from "../core/Keyboard";
+
+// Constants for the fixed aspect ratio
+const DESIGN_WIDTH = 1680;
+const DESIGN_HEIGHT = 720;
+const DESIGN_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
 
 export default class Game extends Container {
   name = "Game";
@@ -16,6 +21,8 @@ export default class Game extends Container {
   private timerContainer!: Container;
   private timerText!: Text;
   private blinkEffect!: Sprite;
+  private gameFrame!: Graphics;
+  private app!: Application;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
@@ -53,8 +60,6 @@ export default class Game extends Container {
   private muteIcon!: HTMLElement;
   private historySound = new Audio('sounds/clickSound.wav'); 
   private openDoorSound = new Audio('sounds/openDoor.wav'); 
-  
-
 
   constructor(protected utils: SceneUtils) {
     super();
@@ -62,7 +67,6 @@ export default class Game extends Container {
 
   async load() {
     await this.utils.assetLoader.loadAssets();
-
     const text = new Text("Loading...", {
       fontFamily: "Verdana",
       fontSize: 50,
@@ -73,7 +77,7 @@ export default class Game extends Container {
 
     const loadingBg = new Graphics()
       .beginFill(0x0b1354)
-      .drawRect(0, 0, window.innerWidth, window.innerHeight);
+      .drawRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
 
     this.addChild(loadingBg, text);
   }
@@ -81,24 +85,31 @@ export default class Game extends Container {
   async start() {
     this.removeChildren();
   
+    // Create a frame for the game content
+    this.gameFrame = new Graphics();
+    this.gameFrame.beginFill(0x000000);
+    this.gameFrame.drawRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
+    this.gameFrame.endFill();
+    this.addChild(this.gameFrame);
+  
     // Initialize timer first
     this.initTimer();
     
     const bgTexture = Texture.from('assets/bg.png');
     this.background = new Sprite(bgTexture);
-    this.background.width = window.innerWidth;
-    this.background.height = window.innerHeight;
+    this.background.width = DESIGN_WIDTH;
+    this.background.height = DESIGN_HEIGHT;
   
     const doorTexture = Texture.from('assets/door.png');
     this.door = new Sprite(doorTexture);
     this.door.anchor.set(0.5);
-    this.door.position.set(window.innerWidth * 0.5, window.innerHeight * 0.49);
+    this.door.position.set(DESIGN_WIDTH * 0.5, DESIGN_HEIGHT * 0.49);
     this.door.scale.set(0.25);
   
     const doorOpenTexture = Texture.from('assets/doorOpen.png');
     this.doorOpen = new Sprite(doorOpenTexture);
     this.doorOpen.anchor.set(0.5);
-    this.doorOpen.position.set(window.innerWidth * 0.73, window.innerHeight * 0.49);
+    this.doorOpen.position.set(DESIGN_WIDTH * 0.73, DESIGN_HEIGHT * 0.49);
     this.doorOpen.scale.set(0.25);
     this.doorOpen.visible = false;
   
@@ -112,24 +123,24 @@ export default class Game extends Container {
     const handleShadowTexture = Texture.from('assets/handleShadow.png');
     this.handleShadow = new Sprite(handleShadowTexture);
     this.handleShadow.anchor.set(0.5);
-    this.handleShadow.position.set(window.innerWidth * 0.485, window.innerHeight * 0.5);
+    this.handleShadow.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.5);
     this.handleShadow.scale.set(0.25);
   
     const handleTexture = Texture.from('assets/handle.png');
     this.handle = new Sprite(handleTexture);
     this.handle.anchor.set(0.5);
-    this.handle.position.set(window.innerWidth * 0.485, window.innerHeight * 0.485);
+    this.handle.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.485);
     this.handle.scale.set(0.25);
 
     const blinkTexture = Texture.from('assets/blink.png');
     this.blinkEffect = new Sprite(blinkTexture);
     this.blinkEffect.anchor.set(0.5);
-    this.blinkEffect.position.set(window.innerWidth * 0.5, window.innerHeight * 0.5);
+    this.blinkEffect.position.set(DESIGN_WIDTH * 0.5, DESIGN_HEIGHT * 0.5);
     this.blinkEffect.scale.set(0.25);
     this.blinkEffect.visible = false;
     this.blinkEffect.alpha = 0;
   
-    this.addChild(
+    this.gameFrame.addChild(
       this.background,
       this.door,
       this.handleShadow,
@@ -145,8 +156,10 @@ export default class Game extends Container {
     this.generatePattern();
     this.updateRotationDisplay();
     this.startTimer();
+    
+    // Initial resize to position everything correctly
+    this.onResize(this.app.screen.width, this.app.screen.height);
   }
-
 
   private playClickSound() {
     if (!this.mute) {
@@ -175,7 +188,7 @@ export default class Game extends Container {
     this.muteButton.style.color = 'white';
   
     this.muteIcon = document.createElement('i');
-    this.muteIcon.className = 'fa-solid fa-volume-high'; // start unmuted
+    this.muteIcon.className = 'fa-solid fa-volume-high';
     this.muteButton.appendChild(this.muteIcon);
   
     this.muteButton.addEventListener('click', () => this.toggleMute());
@@ -186,12 +199,11 @@ export default class Game extends Container {
   private toggleMute() {
     this.mute = !this.mute;
     if (this.mute) {
-      this.muteIcon.className = 'fa-solid fa-volume-xmark'; // muted
+      this.muteIcon.className = 'fa-solid fa-volume-xmark';
     } else {
-      this.muteIcon.className = 'fa-solid fa-volume-high'; // unmuted
+      this.muteIcon.className = 'fa-solid fa-volume-high';
     }
   }
-  
 
   private initTimer() {
     this.timerContainer = new Container();
@@ -211,8 +223,8 @@ export default class Game extends Container {
 
   private positionTimer() {
     this.timerContainer.position.set(
-      window.innerWidth * 0.28,
-      window.innerHeight * 0.435
+      DESIGN_WIDTH * 0.28,
+      DESIGN_HEIGHT * 0.435
     );
     this.timerContainer.scale.set(0.5);
   }
@@ -271,7 +283,7 @@ export default class Game extends Container {
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
 
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4); // Reduced to 3 for easier testing.
+      const times = Math.floor(Math.random() * 4);
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
       }
@@ -325,24 +337,18 @@ export default class Game extends Container {
     this.isUnlocked = true;
     this.unlockTime = this.UNLOCK_DURATION;
 
-    // Delay for opening door to make the UX better.
     setTimeout(() => {
-    this.door.visible = false;
-    this.handle.visible = false;
-    this.handleShadow.visible = false;
-    this.doorOpen.visible = true;
-    this.doorOpenShadow.visible = true;
-    // Blinking effect start
-    this.blinkEffect.visible = true;
-    this.blinkPhase = 0;
+      this.door.visible = false;
+      this.handle.visible = false;
+      this.handleShadow.visible = false;
+      this.doorOpen.visible = true;
+      this.doorOpenShadow.visible = true;
+      this.blinkEffect.visible = true;
+      this.blinkPhase = 0;
     }, 1000);  
 
-    
     this.playOpenDoorSound();
-
-
     this.stopTimer();
-    
     
     const display = document.getElementById('rotation-display');
     if (display) {
@@ -357,7 +363,7 @@ export default class Game extends Container {
     if (!this.blinkEffect.visible) return;
     
     this.blinkPhase += this.BLINK_SPEED * delta;
-    this.blinkEffect.alpha = Math.abs(Math.sin(this.blinkPhase)) * 0.5 + 0.5; // Oscillates between 0.5 and 1.0
+    this.blinkEffect.alpha = Math.abs(Math.sin(this.blinkPhase)) * 0.5 + 0.5;
   }
 
   private handleUnlockCountdown(delta: number) {
@@ -393,14 +399,12 @@ export default class Game extends Container {
   }
 
   update(delta: number) {
-    // Hide the timer when resetting
     if (this.isResetting) {
       this.timerContainer.visible = false;
     } else {
       this.timerContainer.visible = true;
     }
 
-    // Update timer
     if (this.timerActive && !this.isUnlocked) {
       this.currentTime = (performance.now() - this.startTime) / 1000;
       this.updateTimerText();
@@ -490,30 +494,33 @@ export default class Game extends Container {
   }
 
   onResize(width: number, height: number) {
-    if (this.background) {
-      this.background.width = width;
-      this.background.height = height;
+    const windowRatio = width / height;
+    let scale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (windowRatio > DESIGN_RATIO) {
+      scale = height / DESIGN_HEIGHT;
+      offsetX = (width - DESIGN_WIDTH * scale) / 2;
+    } else {
+      scale = width / DESIGN_WIDTH;
+      offsetY = (height - DESIGN_HEIGHT * scale) / 2;
     }
-    if (this.timerContainer) {
-      this.positionTimer();
+
+    this.gameFrame.scale.set(scale);
+    this.gameFrame.position.set(offsetX, offsetY);
+
+    this.app.renderer.resize(width, height);
+
+    if (this.muteButton) {
+      this.muteButton.style.right = `${offsetX / scale + 20}px`;
+      this.muteButton.style.top = `${offsetY / scale + 20}px`;
     }
-    if (this.door) {
-      this.door.position.set(width * 0.5, height * 0.49);
-    }
-    if (this.handleShadow) {
-      this.handleShadow.position.set(width * 0.485, height * 0.5);
-    }
-    if (this.handle) {
-      this.handle.position.set(width * 0.485, height * 0.485);
-    }
-    if (this.doorOpen) {
-      this.doorOpen.position.set(width * 0.73, height * 0.49);
-    }
-    if (this.doorOpenShadow) {
-      this.doorOpenShadow.position.set(width * 0.73 + 10, height * 0.49 + 10);
-    }
-    if (this.blinkEffect) {
-      this.blinkEffect.position.set(width * 0.5, height * 0.5);
+
+    const display = document.getElementById('rotation-display');
+    if (display) {
+      display.style.left = `${offsetX / scale + 20}px`;
+      display.style.top = `${offsetY / scale + 20}px`;
     }
   }
 }
