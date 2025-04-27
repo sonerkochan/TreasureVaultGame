@@ -146,7 +146,7 @@ export default class Game extends Container {
   
     this.createRotationDisplay();
     this.generatePattern();
-    this.updateRotationDisplay();
+    //this.updateRotationDisplay();
     this.startTimer();
   }
 
@@ -228,7 +228,7 @@ export default class Game extends Container {
       this.handle.rotation = 0;
       this.handleShadow.rotation = 0;
       this.generatePattern();
-      this.updateRotationDisplay();
+      //this.updateRotationDisplay();
     }
   }
 
@@ -257,7 +257,7 @@ export default class Game extends Container {
     this.audio.playOpenDoorSound();
     this.stopTimer();
     
-    this.updateRotationDisplay();
+    //this.updateRotationDisplay();
   }
 
   private updateBlinkEffect(delta: number) {
@@ -270,7 +270,7 @@ export default class Game extends Container {
   private handleUnlockCountdown(delta: number) {
     this.unlockTime -= delta;
     this.updateBlinkEffect(delta);
-    this.updateRotationDisplay();
+    //this.updateRotationDisplay();
   }
 
   private resetAfterUnlock() {
@@ -284,7 +284,7 @@ export default class Game extends Container {
     
     this.startReset();
     this.startTimer();
-    this.updateRotationDisplay();
+    //this.updateRotationDisplay();
   }
 
   update(delta: number) {
@@ -364,15 +364,16 @@ export default class Game extends Container {
 
     if (patternStr === historyStr) {
       this.unlockVault();
-    } else {
+    } /*else {
       this.updateRotationDisplay();
-    }
+    }*/
   }
 
   private createRotationDisplay() {
     const style = document.createElement('style');
     style.textContent = `
       #rotation-display {
+        display:none;
         position: fixed;
         top: 20px;
         left: 20px;
@@ -393,6 +394,7 @@ export default class Game extends Container {
     document.body.appendChild(display);
   }
 
+  /*
   private updateRotationDisplay() {
     const display = document.getElementById('rotation-display');
     if (!display) return;
@@ -416,6 +418,7 @@ export default class Game extends Container {
       `;
     }
   }
+  */
 
   onResize(width: number, height: number) {
     const windowRatio = width / height;
