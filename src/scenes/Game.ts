@@ -283,9 +283,17 @@ export default class Game extends Container {
     this.blinkEffect.visible = false;
     
     this.startReset();
-    this.startTimer();
-    //this.updateRotationDisplay();
-  }
+
+    new Promise<void>((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, 3000);
+    }).then(() => {
+        this.startTimer();
+    });
+
+}
+
 
   update(delta: number) {
     if (this.isResetting) {
