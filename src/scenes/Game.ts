@@ -316,7 +316,7 @@ export default class Game extends Container {
     let currentDirection = Math.random() > 0.5 ? 1 : -1;
   
     for (let i = 0; i < 3; i++) {
-      const times = Math.floor(Math.random() * 4) + 6;
+      const times = Math.floor(Math.random() * 9) + 1;
       for (let j = 0; j < times; j++) {
         pattern.push(currentDirection);
       }
