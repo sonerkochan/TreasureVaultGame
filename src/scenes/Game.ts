@@ -1,33 +1,20 @@
-import { Container, Text, Graphics, Sprite, Texture, Application, AnimatedSprite } from "pixi.js";
+// Game.ts
+import { Container, Text, Graphics, Sprite, Texture, AnimatedSprite } from "pixi.js";
 import { centerObjects } from "../utils/misc";
 import { SceneUtils } from "../core/App";
 import Keyboard from "../core/Keyboard";
-
-// Constants for the fixed aspect ratio
-const DESIGN_WIDTH = 1680;
-const DESIGN_HEIGHT = 720;
-const DESIGN_RATIO = DESIGN_WIDTH / DESIGN_HEIGHT;
-
-const doorTextures = [
-  Texture.from('animations/P1.png'),
-  Texture.from('animations/P2.png'),
-  Texture.from('animations/P3.png'),
-  Texture.from('animations/P4.png'),
-  Texture.from('animations/P5.png'),
-  Texture.from('animations/P6.png'),
-  Texture.from('animations/P7.png'),
-  //8th img is not good.
-  Texture.from('animations/P9.png'),
-  Texture.from('animations/P10.png'),
-  Texture.from('animations/P11.png'),
-  Texture.from('animations/P12.png'),
-  Texture.from('animations/P13.png'),
-  Texture.from('animations/P14.png'),
-  Texture.from('animations/P15.png'),
-  Texture.from('animations/P16.png'),
-  Texture.from('animations/P17.png'),
-  // add as many as you want
-];
+import { GameUI } from "../core/GameUI";
+import { GameAudio } from "../core/GameAudio";
+import { 
+  DESIGN_WIDTH, 
+  DESIGN_HEIGHT, 
+  DESIGN_RATIO,
+  UNLOCK_DURATION,
+  RESET_SPIN_DURATION,
+  RESET_SPIN_SPEED,
+  BLINK_SPEED,
+  doorTextures
+} from "../core/GameConstants";
 
 export default class Game extends Container {
   name = "Game";
@@ -39,12 +26,13 @@ export default class Game extends Container {
   private doorOpenShadow!: Sprite;
   private handle!: Sprite;
   private handleShadow!: Sprite;
-  private timerContainer!: Container;
-  private timerText!: Text;
   private blinkEffect!: Sprite;
   private gameFrame!: Graphics;
-  private app!: Application;
   private animatedDoor!: AnimatedSprite;
+
+  // Components
+  private ui: GameUI;
+  private audio: GameAudio;
 
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
@@ -54,37 +42,22 @@ export default class Game extends Container {
   private accumulatedRotation = 0;
   private lastDirection: 'LEFT' | 'RIGHT' | null = null;
 
-  // Unlock pattern
+  // Game state
   private generatedPattern: number[] = [];
   private isUnlocked = false;
   private unlockTime = 0;
-  private readonly UNLOCK_DURATION = 300;
-
-  // Timer tracking
-  private startTime = 0;
   private currentTime = 0;
   private timerActive = false;
-
-  // Reset animation
+  private startTime = 0;
   private isResetting = false;
   private resetSpinSpeed = 0;
   private resetSpinDuration = 0;
-  private readonly RESET_SPIN_DURATION = 180;
-  private readonly RESET_SPIN_SPEED = 0.3;
-
-  // Blink effect
   private blinkPhase = 0;
-  private readonly BLINK_SPEED = 0.1;
-
-  // Sound effects
-  private mute = false;
-  private muteButton!: HTMLButtonElement;
-  private muteIcon!: HTMLElement;
-  private historySound = new Audio('sounds/clickSound.wav'); 
-  private openDoorSound = new Audio('sounds/openDoor.wav'); 
 
   constructor(protected utils: SceneUtils) {
     super();
+    this.ui = new GameUI();
+    this.audio = new GameAudio();
   }
 
   async load() {
@@ -107,73 +80,57 @@ export default class Game extends Container {
   async start() {
     this.removeChildren();
   
-    // Create a frame for the game content
     this.gameFrame = new Graphics();
     this.gameFrame.beginFill(0x000000);
     this.gameFrame.drawRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
     this.gameFrame.endFill();
     this.addChild(this.gameFrame);
   
-    // Initialize timer first
-    this.initTimer();
-    
-    const bgTexture = Texture.from('assets/bg.png');
-    this.background = new Sprite(bgTexture);
+    this.background = new Sprite(Texture.from('assets/bg.png'));
     this.background.width = DESIGN_WIDTH;
     this.background.height = DESIGN_HEIGHT;
   
-    const doorTexture = Texture.from('assets/door.png');
-    this.door = new Sprite(doorTexture);
+    this.door = new Sprite(Texture.from('assets/door.png'));
     this.door.anchor.set(0.5);
     this.door.position.set(DESIGN_WIDTH * 0.5, DESIGN_HEIGHT * 0.49);
     this.door.scale.set(0.25);
   
-    const doorOpenTexture = Texture.from('assets/doorOpen.png');
-    this.doorOpen = new Sprite(doorOpenTexture);
+    this.doorOpen = new Sprite(Texture.from('assets/doorOpen.png'));
     this.doorOpen.anchor.set(0.5);
     this.doorOpen.position.set(DESIGN_WIDTH * 0.73, DESIGN_HEIGHT * 0.49);
     this.doorOpen.scale.set(0.25);
     this.doorOpen.visible = false;
   
-    const doorOpenShadowTexture = Texture.from('assets/doorOpenShadow.png');
-    this.doorOpenShadow = new Sprite(doorOpenShadowTexture);
+    this.doorOpenShadow = new Sprite(Texture.from('assets/doorOpenShadow.png'));
     this.doorOpenShadow.anchor.set(0.5);
     this.doorOpenShadow.position.set(this.doorOpen.position.x + 30, this.doorOpen.position.y + 10);
     this.doorOpenShadow.scale.set(0.25);
     this.doorOpenShadow.visible = false;
   
-    const handleShadowTexture = Texture.from('assets/handleShadow.png');
-    this.handleShadow = new Sprite(handleShadowTexture);
+    this.handleShadow = new Sprite(Texture.from('assets/handleShadow.png'));
     this.handleShadow.anchor.set(0.5);
     this.handleShadow.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.5);
     this.handleShadow.scale.set(0.25);
   
-    const handleTexture = Texture.from('assets/handle.png');
-    this.handle = new Sprite(handleTexture);
+    this.handle = new Sprite(Texture.from('assets/handle.png'));
     this.handle.anchor.set(0.5);
     this.handle.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.485);
     this.handle.scale.set(0.25);
 
-    const blinkTexture = Texture.from('assets/blink.png');
-    this.blinkEffect = new Sprite(blinkTexture);
+    this.blinkEffect = new Sprite(Texture.from('assets/blink.png'));
     this.blinkEffect.anchor.set(0.5);
     this.blinkEffect.position.set(DESIGN_WIDTH * 0.5, DESIGN_HEIGHT * 0.5);
     this.blinkEffect.scale.set(0.25);
     this.blinkEffect.visible = false;
     this.blinkEffect.alpha = 0;
-  
 
-        
-
-    this.animatedDoor = new AnimatedSprite(doorTextures);
+    this.animatedDoor = new AnimatedSprite(doorTextures.map(t => Texture.from(t)));
     this.animatedDoor.anchor.set(0.5);
     this.animatedDoor.position.set(DESIGN_WIDTH * 0.58, DESIGN_HEIGHT * 0.5);
     this.animatedDoor.scale.set(0.25);
     this.animatedDoor.animationSpeed = 0.2;
     this.animatedDoor.loop = true;
     this.animatedDoor.visible = false;
-    
-
 
     this.gameFrame.addChild(
       this.background,
@@ -182,133 +139,25 @@ export default class Game extends Container {
       this.handle,
       this.doorOpenShadow,
       this.doorOpen,
-      this.timerContainer,
+      this.ui.container,
       this.blinkEffect,
       this.animatedDoor
     );
   
-    this.createMuteButton();
     this.createRotationDisplay();
     this.generatePattern();
     this.updateRotationDisplay();
     this.startTimer();
   }
 
-  private playClickSound() {
-    if (!this.mute) {
-      this.historySound.currentTime = 0;
-      this.historySound.play();
-    }
-  }
-
-  private playOpenDoorSound() {
-    if (!this.mute) {
-      this.openDoorSound.currentTime = 0;
-      this.openDoorSound.play();
-    }
-  }
-
-  private createMuteButton() {
-    this.muteButton = document.createElement('button');
-    this.muteButton.style.position = 'fixed';
-    this.muteButton.style.top = '20px';
-    this.muteButton.style.right = '20px';
-    this.muteButton.style.background = 'transparent';
-    this.muteButton.style.border = 'none';
-    this.muteButton.style.cursor = 'pointer';
-    this.muteButton.style.zIndex = '1001';
-    this.muteButton.style.fontSize = '32px';
-    this.muteButton.style.color = 'white';
-  
-    this.muteIcon = document.createElement('i');
-    this.muteIcon.className = 'fa-solid fa-volume-high';
-    this.muteButton.appendChild(this.muteIcon);
-  
-    this.muteButton.addEventListener('click', () => this.toggleMute());
-  
-    document.body.appendChild(this.muteButton);
-  }
-  
-  private toggleMute() {
-    this.mute = !this.mute;
-    if (this.mute) {
-      this.muteIcon.className = 'fa-solid fa-volume-xmark';
-    } else {
-      this.muteIcon.className = 'fa-solid fa-volume-high';
-    }
-  }
-
-  private initTimer() {
-    this.timerContainer = new Container();
-    
-    this.timerText = new Text("00.00", {
-      fontFamily: "Arial",
-      fontSize: 24,
-      fill: "#ffffff",
-      fontWeight: "bold"
-    });
-    this.timerText.anchor.set(0.5);
-    this.timerText.position.set(75, 25);
-    
-    this.timerContainer.addChild(this.timerText);
-    this.positionTimer();
-  }
-
-  private positionTimer() {
-    this.timerContainer.position.set(
-      DESIGN_WIDTH * 0.28,
-      DESIGN_HEIGHT * 0.435
-    );
-    this.timerContainer.scale.set(0.5);
-  }
-
   private startTimer() {
     this.startTime = performance.now();
     this.currentTime = 0;
     this.timerActive = true;
-    this.updateTimerText();
   }
 
   private stopTimer() {
     this.timerActive = false;
-  }
-
-  private resetTimer() {
-    this.startTime = performance.now();
-    this.currentTime = 0;
-    this.updateTimerText();
-  }
-
-  private updateTimerText() {
-    if (!this.timerText) return;
-    const formattedTime = this.currentTime.toFixed(2).padStart(5, '0');
-    this.timerText.text = formattedTime;
-  }
-
-  private createRotationDisplay() {
-    const style = document.createElement('style');
-    style.textContent = `
-      #rotation-display {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        color: white;
-        font-family: Arial;
-        background: rgba(0,0,0,0.7);
-        padding: 10px;
-        border-radius: 5px;
-        z-index: 1000;
-        max-width: 300px;
-        line-height: 1.6;
-      }
-    `;
-    document.head.appendChild(style);
-
-    const display = document.createElement('div');
-    display.id = 'rotation-display';
-    document.body.appendChild(display);
-
-    this.updateRotationDisplay();
   }
 
   private generatePattern() {
@@ -325,7 +174,6 @@ export default class Game extends Container {
   
     this.generatedPattern = pattern;
   
-    // Grouping logic here
     const result = [];
     let current = pattern[0];
     let count = 1;
@@ -339,13 +187,11 @@ export default class Game extends Container {
         count = 1;
       }
     }
-    result.push(`${count}${current === 1 ? 'R' : 'L'}`); // push last group
+    result.push(`${count}${current === 1 ? 'R' : 'L'}`);
   
     console.log(`Secret password: ${result.join(', ')}`);
-  
-    this.resetTimer();
+    this.currentTime = 0;
   }
-  
 
   private hasInputError(): boolean {
     if (this.fullRotations.length < 2) return false;
@@ -365,8 +211,8 @@ export default class Game extends Container {
 
   private startReset() {
     this.isResetting = true;
-    this.resetSpinSpeed = this.RESET_SPIN_SPEED * (Math.random() > 0.5 ? 1 : -1);
-    this.resetSpinDuration = this.RESET_SPIN_DURATION;
+    this.resetSpinSpeed = RESET_SPIN_SPEED * (Math.random() > 0.5 ? 1 : -1);
+    this.resetSpinDuration = RESET_SPIN_DURATION;
   }
 
   private handleResetSpin(delta: number) {
@@ -388,13 +234,12 @@ export default class Game extends Container {
 
   private unlockVault() {
     this.isUnlocked = true;
-    this.unlockTime = this.UNLOCK_DURATION;
+    this.unlockTime = UNLOCK_DURATION;
 
-    
     this.door.visible = false;
     this.handle.visible = false;
     this.handleShadow.visible = false;
-    this.animatedDoor.visible=true;
+    this.animatedDoor.visible = true;
     this.animatedDoor.play();
 
     setTimeout(() => {
@@ -402,44 +247,26 @@ export default class Game extends Container {
       this.doorOpenShadow.visible = true;
       this.blinkEffect.visible = true;
       this.blinkPhase = 0;
-      this.animatedDoor.visible=false;
+      this.animatedDoor.visible = false;
     }, 1000);  
 
-    this.playOpenDoorSound();
+    this.audio.playOpenDoorSound();
     this.stopTimer();
     
-    const display = document.getElementById('rotation-display');
-    if (display) {
-      display.innerHTML = `
-        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked in ${this.currentTime.toFixed(2)}s!</div>
-        <div>Auto-closing in ${Math.ceil(this.unlockTime/60)} seconds...</div>
-      `;
-    }
+    this.updateRotationDisplay();
   }
 
   private updateBlinkEffect(delta: number) {
     if (!this.blinkEffect.visible) return;
     
-    this.blinkPhase += this.BLINK_SPEED * delta;
+    this.blinkPhase += BLINK_SPEED * delta;
     this.blinkEffect.alpha = Math.abs(Math.sin(this.blinkPhase)) * 0.5 + 0.5;
   }
 
   private handleUnlockCountdown(delta: number) {
     this.unlockTime -= delta;
     this.updateBlinkEffect(delta);
-    
-    const display = document.getElementById('rotation-display');
-    if (display) {
-      const secondsLeft = Math.ceil(this.unlockTime/60);
-      display.innerHTML = `
-        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked in ${this.currentTime.toFixed(2)}s!</div>
-        <div>Auto-closing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...</div>
-      `;
-    }
-
-    if (this.unlockTime <= 0) {
-      this.resetAfterUnlock();
-    }
+    this.updateRotationDisplay();
   }
 
   private resetAfterUnlock() {
@@ -458,18 +285,21 @@ export default class Game extends Container {
 
   update(delta: number) {
     if (this.isResetting) {
-      this.timerContainer.visible = false;
+      this.ui.visible = false;
     } else {
-      this.timerContainer.visible = true;
+      this.ui.visible = true;
     }
 
     if (this.timerActive && !this.isUnlocked) {
       this.currentTime = (performance.now() - this.startTime) / 1000;
-      this.updateTimerText();
+      this.ui.updateTimerText(this.currentTime);
     }
 
     if (this.isUnlocked) {
       this.handleUnlockCountdown(delta);
+      if (this.unlockTime <= 0) {
+        this.resetAfterUnlock();
+      }
       return;
     }
 
@@ -516,7 +346,7 @@ export default class Game extends Container {
         this.fullRotations.push(this.lastDirection === 'LEFT' ? -1 : 1);
         this.accumulatedRotation -= fullRotation;
 
-        this.playClickSound();
+        this.audio.playClickSound();
 
         if (this.hasInputError()) {
           this.startReset();
@@ -535,6 +365,30 @@ export default class Game extends Container {
     }
   }
 
+  private createRotationDisplay() {
+    const style = document.createElement('style');
+    style.textContent = `
+      #rotation-display {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        color: white;
+        font-family: Arial;
+        background: rgba(0,0,0,0.7);
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 1000;
+        max-width: 300px;
+        line-height: 1.6;
+      }
+    `;
+    document.head.appendChild(style);
+
+    const display = document.createElement('div');
+    display.id = 'rotation-display';
+    document.body.appendChild(display);
+  }
+
   private updateRotationDisplay() {
     const display = document.getElementById('rotation-display');
     if (!display) return;
@@ -542,13 +396,21 @@ export default class Game extends Container {
     const rotationText = this.fullRotations.map(r => r === 1 ? '↻' : '↺').join('');
     const passwordText = this.generatedPattern.map(r => r === 1 ? '↻' : '↺').join('');
 
-    display.innerHTML = `
-      <div><strong>Password:</strong> ${passwordText}</div>
-      <div><strong>History:</strong> ${rotationText}</div>
-      <div><strong>Total:</strong> ${this.fullRotations.length}</div>
-      <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
-      <div><strong>Status:</strong> ${this.isResetting ? 'Resetting' : '❌ Still locked'}</div>
-    `;
+    if (this.isUnlocked) {
+      const secondsLeft = Math.ceil(this.unlockTime/60);
+      display.innerHTML = `
+        <div style="color: #4CAF50; font-weight: bold;">✅ Vault Unlocked in ${this.currentTime.toFixed(2)}s!</div>
+        <div>Auto-closing in ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''}...</div>
+      `;
+    } else {
+      display.innerHTML = `
+        <div><strong>Password:</strong> ${passwordText}</div>
+        <div><strong>History:</strong> ${rotationText}</div>
+        <div><strong>Total:</strong> ${this.fullRotations.length}</div>
+        <div><strong>Current:</strong> ${this.lastDirection === 'LEFT' ? '↺' : '↻'}</div>
+        <div><strong>Status:</strong> ${this.isResetting ? 'Resetting' : '❌ Still locked'}</div>
+      `;
+    }
   }
 
   onResize(width: number, height: number) {
@@ -568,12 +430,7 @@ export default class Game extends Container {
     this.gameFrame.scale.set(scale);
     this.gameFrame.position.set(offsetX, offsetY);
 
-    this.app.renderer.resize(width, height);
-
-    if (this.muteButton) {
-      this.muteButton.style.right = `${offsetX / scale + 20}px`;
-      this.muteButton.style.top = `${offsetY / scale + 20}px`;
-    }
+    this.audio.updatePosition(offsetX, offsetY, scale);
 
     const display = document.getElementById('rotation-display');
     if (display) {
