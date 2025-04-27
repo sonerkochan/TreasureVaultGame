@@ -232,7 +232,12 @@ export default class Game extends Container {
     }
   }
 
-  private unlockVault() {
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async  unlockVault() {
     this.isUnlocked = true;
     this.unlockTime = UNLOCK_DURATION;
 
@@ -242,13 +247,12 @@ export default class Game extends Container {
     this.animatedDoor.visible = true;
     this.animatedDoor.play();
 
-    setTimeout(() => {
+    await this.delay(1000);
       this.doorOpen.visible = true;
       this.doorOpenShadow.visible = true;
       this.blinkEffect.visible = true;
       this.blinkPhase = 0;
       this.animatedDoor.visible = false;
-    }, 1000);  
 
     this.audio.playOpenDoorSound();
     this.stopTimer();
