@@ -213,6 +213,15 @@ export default class Game extends Container {
     this.isResetting = true;
     this.resetSpinSpeed = RESET_SPIN_SPEED * (Math.random() > 0.5 ? 1 : -1);
     this.resetSpinDuration = RESET_SPIN_DURATION;
+
+    new Promise<void>((resolve) => {
+        setTimeout(() => {
+            resolve();
+        }, 3000);
+    }).then(() => {
+        this.startTimer();
+    });
+
   }
 
   private handleResetSpin(delta: number) {
