@@ -15,7 +15,7 @@ export class GameAudio {
   private createMuteButton() {
     this.muteButton.style.position = 'fixed';
     this.muteButton.style.top = '20px';
-    this.muteButton.style.right = '20px';
+    this.muteButton.style.left = '20px';
     this.muteButton.style.background = 'transparent';
     this.muteButton.style.border = 'none';
     this.muteButton.style.cursor = 'pointer';

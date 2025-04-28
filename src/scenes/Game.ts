@@ -153,7 +153,7 @@ export default class Game extends Container {
     helpButtonBg.endFill();
     helpButtonBg.interactive = true;
     helpButtonBg.cursor = 'pointer';
-    helpButtonBg.position.set(20, 20);
+    helpButtonBg.position.set(DESIGN_WIDTH - 120, 20);
 
     const helpButtonText = new Text('Help', {
         fontFamily: 'Verdana',
