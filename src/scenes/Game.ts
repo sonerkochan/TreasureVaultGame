@@ -1,6 +1,6 @@
 // Game.ts
 import { Container, Text, Graphics, Sprite, Texture, AnimatedSprite } from "pixi.js";
-import { centerObjects } from "../utils/misc";
+import { centerObjects, after } from "../utils/misc";
 import { SceneUtils } from "../core/App";
 import Keyboard from "../core/Keyboard";
 import { GameUI } from "../core/GameUI";
@@ -255,20 +255,14 @@ export default class Game extends Container {
 
     return false;
   }
-
   private startReset() {
     this.isResetting = true;
     this.resetSpinSpeed = RESET_SPIN_SPEED * (Math.random() > 0.5 ? 1 : -1);
     this.resetSpinDuration = RESET_SPIN_DURATION;
-
-    new Promise<void>((resolve) => {
-        setTimeout(() => {
-            resolve();
-        }, 3000);
-    }).then(() => {
-        this.startTimer();
+  
+    after(3, () => {
+      this.startTimer();
     });
-
   }
 
   private handleResetSpin(delta: number) {
@@ -337,18 +331,13 @@ export default class Game extends Container {
     this.doorOpen.visible = false;
     this.doorOpenShadow.visible = false;
     this.blinkEffect.visible = false;
-    
+  
     this.startReset();
-
-    new Promise<void>((resolve) => {
-        setTimeout(() => {
-            resolve();
-        }, 3000);
-    }).then(() => {
-        this.startTimer();
+  
+    after(3, () => {
+      this.startTimer();
     });
-
-}
+  }
 
 
   update(delta: number) {
