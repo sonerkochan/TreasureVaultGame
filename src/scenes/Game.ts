@@ -144,7 +144,7 @@ export default class Game extends Container {
       this.animatedDoor
     );
   
-    this.createRotationDisplay();
+    //this.createRotationDisplay();
     this.generatePattern();
     //this.updateRotationDisplay();
     this.startTimer();
@@ -386,11 +386,13 @@ export default class Game extends Container {
     }*/
   }
 
+
+  // createRotationDisplay and updateRotationDisplay were for testing, purposes. 
+  /*
   private createRotationDisplay() {
     const style = document.createElement('style');
     style.textContent = `
       #rotation-display {
-        display:none;
         position: fixed;
         top: 20px;
         left: 20px;
@@ -409,7 +411,7 @@ export default class Game extends Container {
     const display = document.createElement('div');
     display.id = 'rotation-display';
     document.body.appendChild(display);
-  }
+  }*/
 
   /*
   private updateRotationDisplay() {
