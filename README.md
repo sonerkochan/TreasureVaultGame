@@ -12,6 +12,11 @@
 
 2. Navigate to the new directory and install the project dependencies using `npm install`
 
+## How to play 🎮
+
+    Press `A` to rotate left
+    Press `D` to rotate right
+    Hint, check the console 😉
 
 ### Commands 💻
 
