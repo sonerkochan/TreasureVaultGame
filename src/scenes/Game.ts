@@ -34,6 +34,9 @@ export default class Game extends Container {
   private ui: GameUI;
   private audio: GameAudio;
 
+  // How to Play
+  private isHelpVisible = false;
+
   // Rotation tracking
   private keyboard = Keyboard.getInstance();
   private rotationSpeed = 0.03;
@@ -79,39 +82,39 @@ export default class Game extends Container {
 
   async start() {
     this.removeChildren();
-  
+
     this.gameFrame = new Graphics();
     this.gameFrame.beginFill(0x000000);
     this.gameFrame.drawRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
     this.gameFrame.endFill();
     this.addChild(this.gameFrame);
-  
+
     this.background = new Sprite(Texture.from('assets/bg.png'));
     this.background.width = DESIGN_WIDTH;
     this.background.height = DESIGN_HEIGHT;
-  
+
     this.door = new Sprite(Texture.from('assets/door.png'));
     this.door.anchor.set(0.5);
     this.door.position.set(DESIGN_WIDTH * 0.5, DESIGN_HEIGHT * 0.49);
     this.door.scale.set(0.25);
-  
+
     this.doorOpen = new Sprite(Texture.from('assets/doorOpen.png'));
     this.doorOpen.anchor.set(0.5);
     this.doorOpen.position.set(DESIGN_WIDTH * 0.73, DESIGN_HEIGHT * 0.49);
     this.doorOpen.scale.set(0.25);
     this.doorOpen.visible = false;
-  
+
     this.doorOpenShadow = new Sprite(Texture.from('assets/doorOpenShadow.png'));
     this.doorOpenShadow.anchor.set(0.5);
     this.doorOpenShadow.position.set(this.doorOpen.position.x + 30, this.doorOpen.position.y + 10);
     this.doorOpenShadow.scale.set(0.25);
     this.doorOpenShadow.visible = false;
-  
+
     this.handleShadow = new Sprite(Texture.from('assets/handleShadow.png'));
     this.handleShadow.anchor.set(0.5);
     this.handleShadow.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.5);
     this.handleShadow.scale.set(0.25);
-  
+
     this.handle = new Sprite(Texture.from('assets/handle.png'));
     this.handle.anchor.set(0.5);
     this.handle.position.set(DESIGN_WIDTH * 0.485, DESIGN_HEIGHT * 0.485);
@@ -133,22 +136,66 @@ export default class Game extends Container {
     this.animatedDoor.visible = false;
 
     this.gameFrame.addChild(
-      this.background,
-      this.door,
-      this.handleShadow,
-      this.handle,
-      this.doorOpenShadow,
-      this.doorOpen,
-      this.ui.container,
-      this.blinkEffect,
-      this.animatedDoor
+        this.background,
+        this.door,
+        this.handleShadow,
+        this.handle,
+        this.doorOpenShadow,
+        this.doorOpen,
+        this.ui.container,
+        this.blinkEffect,
+        this.animatedDoor
     );
-  
-    //this.createRotationDisplay();
+
+    const helpButtonBg = new Graphics();
+    helpButtonBg.beginFill(0x000000, 0.6);
+    helpButtonBg.drawRoundedRect(0, 0, 100, 40, 10);
+    helpButtonBg.endFill();
+    helpButtonBg.interactive = true;
+    helpButtonBg.cursor = 'pointer';
+    helpButtonBg.position.set(20, 20);
+
+    const helpButtonText = new Text('Help', {
+        fontFamily: 'Verdana',
+        fontSize: 24,
+        fill: 'white',
+    });
+    helpButtonText.anchor.set(0.5);
+    helpButtonText.position.set(50, 20);
+
+    helpButtonBg.addChild(helpButtonText);
+    this.addChild(helpButtonBg);
+
+    const instructions = new Text('Controls:\nA - Rotate Left\nD - Rotate Right\n Press `Help` button to close this window', {
+        fontFamily: 'Verdana',
+        fontSize: 24,
+        fill: 'white',
+        align: 'center',
+    });
+    instructions.anchor.set(0.5);
+    instructions.position.set(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+
+    const instructionBg = new Graphics();
+    instructionBg.beginFill(0x808080);
+    instructionBg.drawRoundedRect(0, 0, instructions.width + 40, instructions.height + 40, 20);
+    instructionBg.endFill();
+    instructionBg.position.set((DESIGN_WIDTH - instructionBg.width) / 2, (DESIGN_HEIGHT - instructionBg.height) / 2);
+
+    const instructionContainer = new Container();
+    instructionContainer.addChild(instructionBg);
+    instructionContainer.addChild(instructions);
+    instructionContainer.visible = false;
+    this.addChild(instructionContainer);
+
+    helpButtonBg.on('pointerdown', () => {
+        this.isHelpVisible = !this.isHelpVisible;
+        instructionContainer.visible = this.isHelpVisible;
+    });
+
+
     this.generatePattern();
-    //this.updateRotationDisplay();
     this.startTimer();
-  }
+}
 
   private startTimer() {
     this.startTime = performance.now();
